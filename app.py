@@ -1,3 +1,4 @@
+from flask import session, render_template, redirect, url_for, request
 import os
 from flask import Flask, session, redirect, url_for, request, render_template, g
 from config import Config
@@ -49,6 +50,91 @@ def home():
     
     return render_template('index.html', productos=productos, categorias=categorias, 
                            whatsapp=Config.NUMERO_WHATSAPP, query=q)
+
+# --- Rutas del Carrito (Lógica en Python) ---
+
+@app.route('/carrito/agregar/<id>')
+def agregar_al_carrito(id):
+    db = get_db()
+    producto = db.execute('SELECT * FROM productos WHERE id = ?', (id,)).fetchone()
+    
+    if not producto:
+        return redirect(url_for('home'))
+
+    # Inicializar carrito en sesión si no existe
+    if 'cart' not in session:
+        session['cart'] = {}
+    
+    cart = session['cart']
+    
+    # Lógica de Stock (Falla 2)
+    cantidad_actual = cart.get(id, 0)
+    if cantidad_actual < producto['cantidad']:
+        cart[id] = cantidad_actual + 1
+        session.modified = True
+    # Si no hay stock, simplemente no suma y redirige
+    
+    return redirect(url_for('home'))
+
+@app.route('/carrito/restar/<id>')
+def restar_del_carrito(id):
+    if 'cart' in session and id in session['cart']:
+        session['cart'][id] -= 1
+        if session['cart'][id] <= 0:
+            session['cart'].pop(id)
+        session.modified = True
+    return redirect(url_for('home'))
+
+@app.route('/carrito/limpiar')
+def limpiar_carrito():
+    session.pop('cart', None)
+    return redirect(url_for('home'))
+
+# --- Ruta Home Actualizada ---
+@app.route('/')
+def home():
+    db = get_db()
+    cat_id = request.args.get('cat')
+    q = request.args.get('q', '').strip()
+    today = datetime.now().strftime('%Y-%m-%d')
+
+    # Buscamos productos
+    sql = 'SELECT p.*, c.nombre as cat_nombre FROM productos p JOIN categorias c ON p.categoria_id = c.id WHERE p.publicar_hasta >= ?'
+    params = [today]
+    if cat_id:
+        sql += ' AND p.categoria_id = ?'; params.append(cat_id)
+    if q:
+        sql += ' AND p.nombre LIKE ?'; params.append(f'%{q}%')
+    
+    productos = db.execute(sql, params).fetchall()
+    categorias = db.execute('SELECT id, nombre FROM categorias ORDER BY nombre').fetchall()
+
+    # --- Lógica para mostrar el Carrito en el Modal ---
+    items_carrito = []
+    total_compra = 0
+    mensaje_whatsapp = "🌟 *PEDIDO FARMACIA 2026* 🌟%0A%0A"
+    
+    if 'cart' in session:
+        for p_id, cant in session['cart'].items():
+            p = db.execute('SELECT * FROM productos WHERE id = ?', (p_id,)).fetchone()
+            if p:
+                subtotal = cant * p['precio']
+                total_compra += subtotal
+                items_carrito.append({'id': p_id, 'nombre': p['nombre'], 'cantidad': cant, 'precio': p['precio'], 'subtotal': subtotal})
+                mensaje_whatsapp += f"✅ *{cant}x* {p['nombre']} - ${subtotal:.2f}%0A"
+    
+    mensaje_whatsapp += f"%0A💰 *TOTAL: ${total_compra:.2f}*"
+
+    return render_template('index.html', 
+                           productos=productos, 
+                           categorias=categorias, 
+                           items_carrito=items_carrito,
+                           total_compra=total_compra,
+                           whatsapp_link=f"https://wa.me/{Config.NUMERO_WHATSAPP}?text={mensaje_whatsapp}",
+                           query=q)
+
+
+
 
 # --- Rutas Admin (Lógica completa extraída de tu app.py original) ---
 @app.route('/login', methods=['GET', 'POST'])

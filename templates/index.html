@@ -9,8 +9,8 @@
 {% endblock %}
 
 {% block content %}
-<div class="hero text-center bg-white p-5 rounded-4 shadow-sm my-4" style="backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.4);">
-    <h1 class="fw-bold mb-3" style="background: linear-gradient(90deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Siempre cerca, siempre listos.</h1>
+<div class="hero text-center bg-white p-5 rounded-4 shadow-sm my-4">
+    <h1 class="fw-bold mb-3">Siempre cerca, siempre listos.</h1>
     <p class="lead text-muted mb-0">Medicamentos esenciales y estética premium con atención personalizada.</p>
 </div>
 
@@ -30,6 +30,8 @@
         <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden position-relative product-card">
             {% if p.cantidad <= 5 and p.cantidad > 0 %}
                 <span class="badge bg-danger position-absolute top-0 end-0 m-3 shadow">¡Quedan pocas!</span>
+            {% elif p.cantidad == 0 %}
+                <span class="badge bg-secondary position-absolute top-0 end-0 m-3 shadow">Agotado</span>
             {% endif %}
             
             <div style="height: 220px; overflow: hidden; background: #f8f9fa;">
@@ -43,41 +45,72 @@
             <div class="card-body text-center">
                 <h5 class="fw-bold mb-3">{{ p.nombre }}</h5>
                 <div class="d-flex justify-content-between align-items-center">
-                    <span class="fs-4 fw-bold text-primary">${{ "%.2f"|format(p.price or p.precio) }}</span>
-                    <button onclick="addToCart('{{ p.nombre|e }}', {{ p.precio }})" class="btn btn-primary rounded-pill px-4">+ Añadir</button>
+                    <span class="fs-4 fw-bold text-primary">${{ "%.2f"|format(p.precio) }}</span>
+                    {% if p.cantidad > 0 %}
+                        <a href="/carrito/agregar/{{ p.id }}" class="btn btn-primary rounded-pill px-4">+ Añadir</a>
+                    {% else %}
+                        <button class="btn btn-secondary rounded-pill px-4" disabled>Sin Stock</button>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
     {% endfor %}
 </div>
-{% else %}
-<div class="text-center py-5">
-    <h3>No encontramos productos</h3>
-    <p>Intenta con otra búsqueda o categoría.</p>
-</div>
 {% endif %}
 
-<button id="btn-cart" class="btn btn-dark position-fixed bottom-0 end-0 m-4 rounded-pill px-4 py-3 shadow-lg" onclick="sendWhatsApp()">
-    🛒 Ver Pedido <span class="badge bg-primary ms-2" id="cart-count">0</span>
+<button class="btn btn-dark position-fixed bottom-0 end-0 m-4 rounded-pill px-4 py-3 shadow-lg" data-bs-toggle="modal" data-bs-target="#cartModal">
+    🛒 Ver Pedido <span class="badge bg-primary ms-2">{{ items_carrito|length }}</span>
 </button>
+
+<div class="modal fade" id="cartModal" tabindex="-1" aria-labelledby="cartModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="cartModalLabel">Tu Carrito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% for item in items_carrito %}
+                <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded-3">
+                    <div>
+                        <span class="fw-bold">{{ item.nombre }}</span><br>
+                        <small class="text-muted">${{ "%.2f"|format(item.precio) }} c/u</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="/carrito/restar/{{ item.id }}" class="btn btn-sm btn-outline-danger shadow-sm">-</a>
+                        <span class="fw-bold px-2">{{ item.cantidad }}</span>
+                        <a href="/carrito/agregar/{{ item.id }}" class="btn btn-sm btn-outline-primary shadow-sm">+</a>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <p class="text-muted">El carrito está vacío</p>
+                </div>
+                {% endfor %}
+                
+                {% if items_carrito %}
+                <div class="border-top pt-3 mt-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Total a pagar:</span>
+                        <h4 class="fw-bold text-primary mb-0">${{ "%.2f"|format(total_compra) }}</h4>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer border-0">
+                {% if items_carrito %}
+                    <a href="{{ whatsapp_link }}" class="btn btn-success w-100 rounded-pill py-2 fw-bold" target="_blank">
+                        CONFIRMAR POR WHATSAPP
+                    </a>
+                {% else %}
+                    <button class="btn btn-secondary w-100 rounded-pill py-2" data-bs-dismiss="modal">Cerrar</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-let cart = [];
-function addToCart(name, price) {
-    cart.push({name, price});
-    document.getElementById('cart-count').innerText = cart.length;
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: name + ' añadido', showConfirmButton: false, timer: 1500 });
-}
-function sendWhatsApp() {
-    if (cart.length === 0) return Swal.fire('Carrito vacío', '', 'info');
-    let msg = "🌟 *PEDIDO FARMACIA 2026* 🌟\n\n";
-    let total = 0;
-    cart.forEach(i => { msg += `✅ ${i.name} — $${i.price}\n`; total += i.price; });
-    msg += `\n💰 *TOTAL: $${total.toFixed(2)}*`;
-    window.open(`https://wa.me/{{ whatsapp }}?text=${encodeURIComponent(msg)}`, '_blank');
-}
-</script>
 {% endblock %}

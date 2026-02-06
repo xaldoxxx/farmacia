@@ -1,12 +1,9 @@
 import os
+import uuid
+from datetime import datetime, timedelta
 from flask import Flask, session, redirect, url_for, request, render_template, g
 from config import Config
 from database import get_db, init_db
-from datetime import datetime, timedelta
-import uuid
-from flask_ngrok import run_with_ngrok
-from pyngrok import ngrok
-
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -31,7 +28,8 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# --- Rutas Cliente ---
+# --- Rutas Cliente & Carrito ---
+
 @app.route('/')
 def home():
     db = get_db()
@@ -39,21 +37,83 @@ def home():
     q = request.args.get('q', '').strip()
     today = datetime.now().strftime('%Y-%m-%d')
 
+    # 1. Buscamos productos según filtros
     sql = 'SELECT p.*, c.nombre as cat_nombre FROM productos p JOIN categorias c ON p.categoria_id = c.id WHERE p.publicar_hasta >= ?'
     params = [today]
-
     if cat_id:
         sql += ' AND p.categoria_id = ?'; params.append(cat_id)
     if q:
         sql += ' AND p.nombre LIKE ?'; params.append(f'%{q}%')
-
+    
     productos = db.execute(sql, params).fetchall()
     categorias = db.execute('SELECT id, nombre FROM categorias ORDER BY nombre').fetchall()
-    
-    return render_template('index.html', productos=productos, categorias=categorias, 
-                           whatsapp=Config.NUMERO_WHATSAPP, query=q)
 
-# --- Rutas Admin (Lógica completa extraída de tu app.py original) ---
+    # 2. Lógica del Carrito (Python Side)
+    items_carrito = []
+    total_compra = 0
+    mensaje_whatsapp = "🌟 *PEDIDO FARMACIA 2026* 🌟%0A%0A"
+    
+    if 'cart' in session:
+        for p_id, cant in session['cart'].items():
+            p = db.execute('SELECT * FROM productos WHERE id = ?', (p_id,)).fetchone()
+            if p:
+                subtotal = cant * p['precio']
+                total_compra += subtotal
+                items_carrito.append({
+                    'id': p_id, 
+                    'nombre': p['nombre'], 
+                    'cantidad': cant, 
+                    'precio': p['precio'], 
+                    'subtotal': subtotal
+                })
+                mensaje_whatsapp += f"✅ *{cant}x* {p['nombre']} - ${subtotal:.2f}%0A"
+    
+    mensaje_whatsapp += f"%0A💰 *TOTAL: ${total_compra:.2f}*"
+
+    return render_template('index.html', 
+                           productos=productos, 
+                           categorias=categorias, 
+                           items_carrito=items_carrito,
+                           total_compra=total_compra,
+                           whatsapp_link=f"https://wa.me/{Config.NUMERO_WHATSAPP}?text={mensaje_whatsapp}",
+                           query=q)
+
+@app.route('/carrito/agregar/<id>')
+def agregar_al_carrito(id):
+    db = get_db()
+    producto = db.execute('SELECT * FROM productos WHERE id = ?', (id,)).fetchone()
+    if not producto:
+        return redirect(url_for('home'))
+
+    if 'cart' not in session:
+        session['cart'] = {}
+    
+    cart = session['cart']
+    cantidad_actual = cart.get(id, 0)
+    
+    # Validación de Stock
+    if cantidad_actual < producto['cantidad']:
+        cart[id] = cantidad_actual + 1
+        session.modified = True
+    
+    return redirect(url_for('home'))
+
+@app.route('/carrito/restar/<id>')
+def restar_del_carrito(id):
+    if 'cart' in session and id in session['cart']:
+        session['cart'][id] -= 1
+        if session['cart'][id] <= 0:
+            session['cart'].pop(id)
+        session.modified = True
+    return redirect(url_for('home'))
+
+@app.route('/carrito/limpiar')
+def limpiar_carrito():
+    session.pop('cart', None)
+    return redirect(url_for('home'))
+
+# --- Rutas Admin ---
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -122,18 +182,18 @@ def logout():
     session.pop('admin_logged_in', None)
     return redirect(url_for('login'))
 
-
-# Reemplaza el bloque final por esto si el anterior falla
+# --- Bloque de ejecución para Google Colab ---
 if __name__ == '__main__':
     with app.app_context():
         init_db()
         
     from pyngrok import ngrok
+    # Tu token está configurado correctamente
     ngrok.set_auth_token("39HgBBF8I4YkpN8PxvDKixjfZ8S_toMWhiEALqwwcNC7cU1S")
     
-    # Abrimos el túnel manualmente en el puerto 5000
     public_url = ngrok.connect(5000).public_url
+    print(f"\n * FARMACIA ONLINE LISTA")
     print(f" * URL PÚBLICA: {public_url}")
+    print(f" * PANEL ADMIN: {public_url}/login\n")
     
-    # Corremos Flask normalmente
     app.run(port=5000)
