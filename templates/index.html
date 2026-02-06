@@ -9,6 +9,20 @@
 {% endblock %}
 
 {% block content %}
+
+
+<!-- Flash messages primero -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show mt-3">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
 <div class="hero text-center bg-white p-5 rounded-4 shadow-sm my-4">
     <h1 class="fw-bold mb-3">Siempre cerca, siempre listos.</h1>
     <p class="lead text-muted mb-0">Medicamentos esenciales y estética premium con atención personalizada.</p>
@@ -58,6 +72,22 @@
     {% endfor %}
 </div>
 {% endif %}
+
+
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+
+
 
 <button class="btn btn-dark position-fixed bottom-0 end-0 m-4 rounded-pill px-4 py-3 shadow-lg" data-bs-toggle="modal" data-bs-target="#cartModal">
     🛒 Ver Pedido <span class="badge bg-primary ms-2">{{ items_carrito|length }}</span>

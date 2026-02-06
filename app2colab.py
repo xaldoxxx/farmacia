@@ -1,7 +1,9 @@
+# app2colab.py (versión corregida y completa)
+
 import os
 import uuid
 from datetime import datetime, timedelta
-from flask import Flask, session, redirect, url_for, request, render_template, g
+from flask import Flask, session, redirect, url_for, request, render_template, g, flash
 from config import Config
 from database import get_db, init_db
 
@@ -24,6 +26,7 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'admin_logged_in' not in session:
+            flash("Debes iniciar sesión para acceder al panel", 'warning')
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated
@@ -48,15 +51,23 @@ def home():
     productos = db.execute(sql, params).fetchall()
     categorias = db.execute('SELECT id, nombre FROM categorias ORDER BY nombre').fetchall()
 
-    # 2. Lógica del Carrito (Python Side)
+    # 2. Lógica del Carrito (con control estricto de stock)
     items_carrito = []
     total_compra = 0
     mensaje_whatsapp = "🌟 *PEDIDO FARMACIA 2026* 🌟%0A%0A"
     
     if 'cart' in session:
-        for p_id, cant in session['cart'].items():
+        for p_id, cant in list(session['cart'].items()):
             p = db.execute('SELECT * FROM productos WHERE id = ?', (p_id,)).fetchone()
             if p:
+                # Ajuste de stock: nunca superar el disponible
+                cant_max = min(cant, p['cantidad'])
+                if cant > cant_max:
+                    flash(f"{p['nombre']}: Cantidad ajustada a stock disponible ({cant_max})", 'warning')
+                    session['cart'][p_id] = cant_max
+                    session.modified = True
+                    cant = cant_max  # actualizamos para el cálculo
+
                 subtotal = cant * p['precio']
                 total_compra += subtotal
                 items_carrito.append({
@@ -76,13 +87,15 @@ def home():
                            items_carrito=items_carrito,
                            total_compra=total_compra,
                            whatsapp_link=f"https://wa.me/{Config.NUMERO_WHATSAPP}?text={mensaje_whatsapp}",
-                           query=q)
+                           query=q,
+                           show_cart=request.args.get('show_cart'))
 
 @app.route('/carrito/agregar/<id>')
 def agregar_al_carrito(id):
     db = get_db()
     producto = db.execute('SELECT * FROM productos WHERE id = ?', (id,)).fetchone()
     if not producto:
+        flash("Producto no encontrado", 'danger')
         return redirect(url_for('home'))
 
     if 'cart' not in session:
@@ -91,12 +104,15 @@ def agregar_al_carrito(id):
     cart = session['cart']
     cantidad_actual = cart.get(id, 0)
     
-    # Validación de Stock
-    if cantidad_actual < producto['cantidad']:
+    # Validación estricta de stock
+    if cantidad_actual + 1 > producto['cantidad']:
+        flash(f"No hay suficiente stock para {producto['nombre']}", 'warning')
+    else:
         cart[id] = cantidad_actual + 1
         session.modified = True
-    
-    return redirect(url_for('home'))
+        flash(f"{producto['nombre']} agregado al carrito", 'success')
+
+    return redirect(url_for('home', show_cart=1))
 
 @app.route('/carrito/restar/<id>')
 def restar_del_carrito(id):
@@ -105,11 +121,13 @@ def restar_del_carrito(id):
         if session['cart'][id] <= 0:
             session['cart'].pop(id)
         session.modified = True
-    return redirect(url_for('home'))
+        flash("Producto reducido del carrito", 'info')
+    return redirect(url_for('home', show_cart=1))
 
 @app.route('/carrito/limpiar')
 def limpiar_carrito():
     session.pop('cart', None)
+    flash("Carrito vaciado", 'info')
     return redirect(url_for('home'))
 
 # --- Rutas Admin ---
@@ -119,7 +137,10 @@ def login():
     if request.method == 'POST':
         if request.form.get('user') == Config.ADMIN_USER and request.form.get('pass') == Config.ADMIN_PASS:
             session['admin_logged_in'] = True
+            flash("Sesión iniciada correctamente", 'success')
             return redirect(url_for('admin_dashboard'))
+        else:
+            flash("Usuario o contraseña incorrectos", 'danger')
     return render_template('login.html')
 
 @app.route('/admin')
@@ -151,35 +172,51 @@ def agregar_producto():
         filename = f"{uuid.uuid4().hex[:12]}.{ext}"
         file.save(os.path.join(Config.UPLOAD_FOLDER, filename))
 
-    db.execute('''INSERT INTO productos (id, nombre, imagen, detalle, precio, cantidad, publicar_hasta, categoria_id)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', 
-               (str(uuid.uuid4()), request.form['nombre'], filename, "", 
-                float(request.form['precio']), int(request.form['cantidad']), 
-                request.form['publicar_hasta'], int(request.form['categoria_id'])))
-    db.commit()
+    try:
+        db.execute('''INSERT INTO productos (id, nombre, imagen, detalle, precio, cantidad, publicar_hasta, categoria_id)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', 
+                   (str(uuid.uuid4()), request.form['nombre'], filename, "", 
+                    float(request.form['precio']), int(request.form['cantidad']), 
+                    request.form['publicar_hasta'], int(request.form['categoria_id'])))
+        db.commit()
+        flash("Producto agregado correctamente", 'success')
+    except Exception as e:
+        flash(f"Error al agregar producto: {str(e)}", 'danger')
+    
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/editar_completo', methods=['POST'])
 @login_required
 def editar_completo():
     db = get_db()
-    db.execute('''UPDATE productos SET nombre=?, precio=?, cantidad=?, publicar_hasta=?, detalle=? WHERE id=?''',
-               (request.form['nombre'], float(request.form['precio']), int(request.form['cantidad']),
-                request.form['publicar_hasta'], request.form['detalle'], request.form['id']))
-    db.commit()
+    try:
+        db.execute('''UPDATE productos SET nombre=?, precio=?, cantidad=?, publicar_hasta=?, detalle=? WHERE id=?''',
+                   (request.form['nombre'], float(request.form['precio']), int(request.form['cantidad']),
+                    request.form['publicar_hasta'], request.form['detalle'], request.form['id']))
+        db.commit()
+        flash("Producto actualizado correctamente", 'success')
+    except Exception as e:
+        flash(f"Error al editar producto: {str(e)}", 'danger')
+    
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/eliminar/<id>')
 @login_required
 def eliminar(id):
     db = get_db()
-    db.execute('DELETE FROM productos WHERE id=?', (id,))
-    db.commit()
+    try:
+        db.execute('DELETE FROM productos WHERE id=?', (id,))
+        db.commit()
+        flash("Producto eliminado correctamente", 'success')
+    except Exception as e:
+        flash(f"Error al eliminar producto: {str(e)}", 'danger')
+    
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/logout')
 def logout():
     session.pop('admin_logged_in', None)
+    flash("Sesión cerrada correctamente", 'info')
     return redirect(url_for('login'))
 
 # --- Bloque de ejecución para Google Colab ---

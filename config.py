@@ -6,7 +6,12 @@ class Config:
     ADMIN_PASS = "farmacia2026"
     NUMERO_WHATSAPP = "5491122334455"
     
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    # Compatible con Colab y script normal
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    except NameError:
+        BASE_DIR = os.getcwd()  # Colab / notebook
+    
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
     DB_DIR = os.path.join(BASE_DIR, 'data')
     DB_FILE = os.path.join(DB_DIR, 'farmacia.db')
