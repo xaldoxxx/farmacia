@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block title %}Acceso Admin{% endblock %}
+{% block content %}
+<div class="row justify-content-center align-items-center min-vh-100">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-lg p-4 rounded-4">
+            <h3 class="text-center fw-bold mb-4">Admin Panel</h3>
+            <form method="POST">
+                <div class="mb-3"><input type="text" name="user" class="form-control py-2" placeholder="Usuario" required></div>
+                <div class="mb-4"><input type="password" name="pass" class="form-control py-2" placeholder="Contraseña" required></div>
+                <button class="btn btn-primary w-100 py-2 fw-bold rounded-pill">INGRESAR</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
