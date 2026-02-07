@@ -29,7 +29,7 @@
 <div class="hero text-center bg-white p-5 rounded-4 shadow-sm my-4">
     <h1 class="fw-bold mb-3">Siempre cerca, siempre listos.</h1>
     <p class="lead text-muted mb-0">
-        Medicamentos esenciales y estética premium con atención personalizada.
+        Medicamentos esenciales y estética premium - pedidos por whatsapp.
     </p>
 </div>
 
@@ -66,7 +66,7 @@
                 </span>
             {% endif %}
 
-            <div style="height:220px;background:#f8f9fa;overflow:hidden;">
+            <div class="zoom-container" style="height:220px;background:#f8f9fa;">
                 {% if p.imagen %}
                     <img src="/static/uploads/{{ p.imagen }}"
                          class="w-100 h-100"
@@ -101,6 +101,15 @@
         </div>
     </div>
     {% endfor %}
+</div>
+{% endif %}
+
+{% if items_carrito %}
+<div class="position-fixed top-0 end-0 m-4 bg-white border rounded-pill px-4 py-2 shadow-sm d-flex align-items-center gap-2">
+    🛒
+    <span class="fw-bold text-primary">
+        ${{ "%.2f"|format(total_compra) }}
+    </span>
 </div>
 {% endif %}
 
@@ -180,4 +189,18 @@
 
 {% endblock %}
 
-{% block extra_js %}{% endblock %}
+{% block extra_js %}
+<style>
+  .zoom-container {
+    overflow: hidden;
+  }
+
+  .zoom-container img {
+    transition: transform .4s ease;
+  }
+
+  .zoom-container:hover img {
+    transform: scale(1.15);
+  }
+</style>
+{% endblock %}
