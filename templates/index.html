@@ -4,20 +4,23 @@
 
 {% block navbar_extra %}
 <form class="d-flex ms-auto w-50" method="GET">
-    <input class="form-control rounded-pill px-4 shadow-sm" type="search" name="q" placeholder="¿Qué necesitas hoy?" value="{{ query or '' }}">
+    <input class="form-control rounded-pill px-4 shadow-sm"
+           type="search"
+           name="q"
+           placeholder="¿Qué necesitas hoy?"
+           value="{{ query or '' }}">
 </form>
 {% endblock %}
 
 {% block content %}
 
-
-<!-- Flash messages primero -->
+<!-- Flash messages (UN SOLO BLOQUE) -->
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
     {% for category, message in messages %}
       <div class="alert alert-{{ category }} alert-dismissible fade show mt-3">
         {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       </div>
     {% endfor %}
   {% endif %}
@@ -25,13 +28,23 @@
 
 <div class="hero text-center bg-white p-5 rounded-4 shadow-sm my-4">
     <h1 class="fw-bold mb-3">Siempre cerca, siempre listos.</h1>
-    <p class="lead text-muted mb-0">Medicamentos esenciales y estética premium con atención personalizada.</p>
+    <p class="lead text-muted mb-0">
+        Medicamentos esenciales y estética premium con atención personalizada.
+    </p>
 </div>
 
+<!-- Categorías -->
 <div class="d-flex flex-wrap gap-3 justify-content-center mb-5 pb-3">
-    <a href="/" class="btn btn-light rounded-pill px-4 shadow-sm {% if not request.args.get('cat') %}active btn-primary text-white{% endif %}">Todos</a>
+    <a href="/"
+       class="btn btn-light rounded-pill px-4 shadow-sm
+       {% if not request.args.get('cat') %}active btn-primary text-white{% endif %}">
+        Todos
+    </a>
+
     {% for cat in categorias %}
-        <a href="/?cat={{ cat.id }}" class="btn btn-light rounded-pill px-4 shadow-sm {% if request.args.get('cat') == cat.id|string %}active btn-primary text-white{% endif %}">
+        <a href="/?cat={{ cat.id }}"
+           class="btn btn-light rounded-pill px-4 shadow-sm
+           {% if request.args.get('cat') == cat.id|string %}active btn-primary text-white{% endif %}">
             {{ cat.nombre }}
         </a>
     {% endfor %}
@@ -41,29 +54,47 @@
 <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 mb-5">
     {% for p in productos %}
     <div class="col">
-        <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden position-relative product-card">
+        <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden position-relative">
+
             {% if p.cantidad <= 5 and p.cantidad > 0 %}
-                <span class="badge bg-danger position-absolute top-0 end-0 m-3 shadow">¡Quedan pocas!</span>
+                <span class="badge bg-danger position-absolute top-0 end-0 m-3">
+                    ¡Quedan pocas!
+                </span>
             {% elif p.cantidad == 0 %}
-                <span class="badge bg-secondary position-absolute top-0 end-0 m-3 shadow">Agotado</span>
+                <span class="badge bg-secondary position-absolute top-0 end-0 m-3">
+                    Agotado
+                </span>
             {% endif %}
-            
-            <div style="height: 220px; overflow: hidden; background: #f8f9fa;">
+
+            <div style="height:220px;background:#f8f9fa;overflow:hidden;">
                 {% if p.imagen %}
-                    <img src="/static/uploads/{{ p.imagen }}" class="w-100 h-100" style="object-fit: cover;">
+                    <img src="/static/uploads/{{ p.imagen }}"
+                         class="w-100 h-100"
+                         style="object-fit:cover;">
                 {% else %}
-                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">Sin foto</div>
+                    <div class="h-100 d-flex align-items-center justify-content-center text-muted">
+                        Sin foto
+                    </div>
                 {% endif %}
             </div>
 
             <div class="card-body text-center">
                 <h5 class="fw-bold mb-3">{{ p.nombre }}</h5>
+
                 <div class="d-flex justify-content-between align-items-center">
-                    <span class="fs-4 fw-bold text-primary">${{ "%.2f"|format(p.precio) }}</span>
+                    <span class="fs-4 fw-bold text-primary">
+                        ${{ "%.2f"|format(p.precio) }}
+                    </span>
+
                     {% if p.cantidad > 0 %}
-                        <a href="/carrito/agregar/{{ p.id }}" class="btn btn-primary rounded-pill px-4">+ Añadir</a>
+                        <a href="/carrito/agregar/{{ p.id }}"
+                           class="btn btn-primary rounded-pill px-4">
+                            + Añadir
+                        </a>
                     {% else %}
-                        <button class="btn btn-secondary rounded-pill px-4" disabled>Sin Stock</button>
+                        <button class="btn btn-secondary rounded-pill px-4" disabled>
+                            Sin stock
+                        </button>
                     {% endif %}
                 </div>
             </div>
@@ -73,74 +104,80 @@
 </div>
 {% endif %}
 
-
-
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-{% endwith %}
-
-
-
-
-<button class="btn btn-dark position-fixed bottom-0 end-0 m-4 rounded-pill px-4 py-3 shadow-lg" data-bs-toggle="modal" data-bs-target="#cartModal">
-    🛒 Ver Pedido <span class="badge bg-primary ms-2">{{ items_carrito|length }}</span>
+<!-- Botón flotante del carrito -->
+<button class="btn btn-dark position-fixed bottom-0 end-0 m-4 rounded-pill px-4 py-3 shadow-lg"
+        data-bs-toggle="modal"
+        data-bs-target="#cartModal"
+        {% if show_cart %}autofocus{% endif %}>
+    🛒 Ver Pedido
+    <span class="badge bg-primary ms-2">{{ items_carrito|length }}</span>
 </button>
 
-<div class="modal fade" id="cartModal" tabindex="-1" aria-labelledby="cartModalLabel" aria-hidden="true">
+<!-- Modal carrito -->
+<div class="modal fade" id="cartModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
+
             <div class="modal-header border-0">
-                <h5 class="modal-title fw-bold" id="cartModalLabel">Tu Carrito</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title fw-bold">Tu Carrito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
+
             <div class="modal-body">
                 {% for item in items_carrito %}
                 <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded-3">
                     <div>
                         <span class="fw-bold">{{ item.nombre }}</span><br>
-                        <small class="text-muted">${{ "%.2f"|format(item.precio) }} c/u</small>
+                        <small class="text-muted">
+                            ${{ "%.2f"|format(item.precio) }} c/u
+                        </small>
                     </div>
+
                     <div class="d-flex align-items-center gap-2">
-                        <a href="/carrito/restar/{{ item.id }}" class="btn btn-sm btn-outline-danger shadow-sm">-</a>
+                        <a href="/carrito/restar/{{ item.id }}"
+                           class="btn btn-sm btn-outline-danger">−</a>
+
                         <span class="fw-bold px-2">{{ item.cantidad }}</span>
-                        <a href="/carrito/agregar/{{ item.id }}" class="btn btn-sm btn-outline-primary shadow-sm">+</a>
+
+                        <a href="/carrito/agregar/{{ item.id }}"
+                           class="btn btn-sm btn-outline-primary">+</a>
                     </div>
                 </div>
                 {% else %}
-                <div class="text-center py-4">
-                    <p class="text-muted">El carrito está vacío</p>
+                <div class="text-center py-4 text-muted">
+                    El carrito está vacío
                 </div>
                 {% endfor %}
-                
+
                 {% if items_carrito %}
-                <div class="border-top pt-3 mt-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted">Total a pagar:</span>
-                        <h4 class="fw-bold text-primary mb-0">${{ "%.2f"|format(total_compra) }}</h4>
-                    </div>
+                <div class="border-top pt-3 mt-3 d-flex justify-content-between">
+                    <span class="text-muted">Total:</span>
+                    <h4 class="fw-bold text-primary mb-0">
+                        ${{ "%.2f"|format(total_compra) }}
+                    </h4>
                 </div>
                 {% endif %}
             </div>
+
             <div class="modal-footer border-0">
                 {% if items_carrito %}
-                    <a href="{{ whatsapp_link }}" class="btn btn-success w-100 rounded-pill py-2 fw-bold" target="_blank">
+                    <a href="{{ whatsapp_link }}"
+                       class="btn btn-success w-100 rounded-pill fw-bold"
+                       target="_blank">
                         CONFIRMAR POR WHATSAPP
                     </a>
                 {% else %}
-                    <button class="btn btn-secondary w-100 rounded-pill py-2" data-bs-dismiss="modal">Cerrar</button>
+                    <button class="btn btn-secondary w-100 rounded-pill"
+                            data-bs-dismiss="modal">
+                        Cerrar
+                    </button>
                 {% endif %}
             </div>
+
         </div>
     </div>
 </div>
+
 {% endblock %}
 
-{% block extra_js %}
-{% endblock %}
+{% block extra_js %}{% endblock %}
