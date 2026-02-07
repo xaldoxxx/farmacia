@@ -26,9 +26,12 @@
   {% endif %}
 {% endwith %}
 
-<div class="hero text-center bg-white p-5 rounded-4 shadow-sm my-4">
+<div class="hero text-center p-5 rounded-4 shadow-sm my-4"
+     style="background:linear-gradient(135deg,#1f7a63,#155e4b);color:white;">
+
     <h1 class="fw-bold mb-3">Siempre cerca, siempre listos.</h1>
-    <p class="lead text-muted mb-0">
+    <p class="lead mb-0" style="opacity:.9;">
+
         Medicamentos esenciales y estética premium - pedidos por whatsapp.
     </p>
 </div>
@@ -191,6 +194,11 @@
 
 {% block extra_js %}
 <style>
+
+  .body {
+    background-color: #f3f8f6;
+  }
+
   .zoom-container {
     overflow: hidden;
   }
