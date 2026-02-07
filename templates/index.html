@@ -55,13 +55,14 @@
 
 {% if productos %}
 <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 mb-5">
+
     {% for p in productos %}
     <div class="col">
-        <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden position-relative">
+        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden position-relative bg-light">
 
             {% if p.cantidad <= 5 and p.cantidad > 0 %}
-                <span class="badge bg-danger position-absolute top-0 end-0 m-3">
-                    ¡Quedan pocas!
+                <span class="badge bg-warning text-dark position-absolute top-0 end-0 m-3">
+                    Últimas unidades
                 </span>
             {% elif p.cantidad == 0 %}
                 <span class="badge bg-secondary position-absolute top-0 end-0 m-3">
@@ -69,41 +70,46 @@
                 </span>
             {% endif %}
 
-            <div class="zoom-container" style="height:220px;background:#f8f9fa;">
+            <div class="zoom-container d-flex align-items-center justify-content-center"
+                 style="height:220px;background:#eef3f1;">
                 {% if p.imagen %}
                     <img src="/static/uploads/{{ p.imagen }}"
                          class="w-100 h-100"
-                         style="object-fit:cover;">
+                         style="object-fit:cover;"
+                         alt="Imagen de {{ p.nombre }}"
+                         loading="lazy">
                 {% else %}
-                    <div class="h-100 d-flex align-items-center justify-content-center text-muted">
-                        Sin foto
-                    </div>
+                    <span class="text-muted small">Imagen no disponible</span>
                 {% endif %}
             </div>
 
-            <div class="card-body text-center">
-                <h5 class="fw-bold mb-3">{{ p.nombre }}</h5>
+            <div class="card-body text-center d-flex flex-column">
+                <h5 class="fw-semibold mb-3 text-dark">
+                    {{ p.nombre }}
+                </h5>
 
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="fs-4 fw-bold text-primary">
+                <div class="mt-auto d-flex justify-content-between align-items-center">
+                    <span class="fs-4 fw-bold text-success">
                         ${{ "%.2f"|format(p.precio) }}
                     </span>
 
                     {% if p.cantidad > 0 %}
                         <a href="/carrito/agregar/{{ p.id }}"
-                           class="btn btn-primary rounded-pill px-4">
-                            + Añadir
+                           class="btn btn-success rounded-pill px-4 fw-semibold">
+                            Añadir
                         </a>
                     {% else %}
-                        <button class="btn btn-secondary rounded-pill px-4" disabled>
+                        <button class="btn btn-outline-secondary rounded-pill px-4" disabled>
                             Sin stock
                         </button>
                     {% endif %}
                 </div>
             </div>
-        </div>
+
+        </article>
     </div>
     {% endfor %}
+
 </div>
 {% endif %}
 
