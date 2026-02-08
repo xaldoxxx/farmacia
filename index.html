@@ -58,13 +58,18 @@
                 {% endif %}
             </div>
 
-            <div class="card-body text-center">
-                <h5 class="fw-bold mb-3">{{ p.nombre }}</h5>
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="fs-4 fw-bold text-primary">${{ "%.2f"|format(p.price or p.precio) }}</span>
-                    <button onclick="addToCart('{{ p.nombre|e }}', {{ p.precio }})" class="btn btn-primary rounded-pill px-4">+ Añadir</button>
-                </div>
+        <div class="card-body text-center">
+            <h5 class="fw-bold mb-3">{{ p.nombre }}</h5>
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="fs-4 fw-bold text-primary">${{ "%.2f"|format(p.precio) }}</span>
+                
+                {% if p.cantidad > 0 %}
+                    <a href="/carrito/agregar/{{ p.id }}" class="btn btn-primary rounded-pill px-4">+ Añadir</a>
+                {% else %}
+                    <button class="btn btn-secondary rounded-pill px-4" disabled>Sin Stock</button>
+                {% endif %}
             </div>
+        </div>
         </div>
     </div>
     {% endfor %}
@@ -75,9 +80,8 @@
     <p>Intenta con otra búsqueda o categoría.</p>
 </div>
 {% endif %}
-
-<button id="btn-cart" class="btn btn-dark position-fixed bottom-0 end-0 m-4 rounded-pill px-4 py-3 shadow-lg" onclick="sendWhatsApp()">
-    🛒 Ver Pedido <span class="badge bg-primary ms-2" id="cart-count">0</span>
+<button class="btn btn-dark position-fixed bottom-0 end-0 m-4 rounded-pill px-4 py-3 shadow-lg" data-bs-toggle="modal" data-bs-target="#cartModal">
+    🛒 ${{ "%.2f"|format(total_compra) }} · Ver Pedido <span class="badge bg-primary ms-2">{{ items_carrito|length }}</span>
 </button>
 {% endblock %}
 

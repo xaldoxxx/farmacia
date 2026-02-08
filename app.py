@@ -1,5 +1,6 @@
 # app.py (versión completa y corregida para PythonAnywhere / colab)
-
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
 import uuid
 from datetime import datetime, timedelta
@@ -13,9 +14,22 @@ from functools import wraps
 app = Flask(__name__)
 app.config.from_object(Config)
 
+
+
 # Asegurar carpetas
 os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(Config.DB_DIR, exist_ok=True)
+
+
+
+# CONFIGURACIÓN DEL LIMITADOR
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://", # Guarda los intentos en RAM
+)
+
 
 # Cerrar conexión DB al final del request
 @app.teardown_appcontext
@@ -136,6 +150,7 @@ def limpiar_carrito():
 # --- Rutas Admin ---
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")  # <--- ESTO BLOQUEA EL ATAQUE
 def login():
     if request.method == 'POST':
         if request.form.get('user') == Config.ADMIN_USER and request.form.get('pass') == Config.ADMIN_PASS:
@@ -143,9 +158,10 @@ def login():
             flash("Sesión iniciada correctamente", 'success')
             return redirect(url_for('admin_dashboard'))
         else:
+            # Aquí podrías incluso poner un pequeño delay para frustrar bots
             flash("Usuario o contraseña incorrectos", 'danger')
     return render_template('login.html')
-
+    
 @app.route('/admin')
 @login_required
 def admin_dashboard():

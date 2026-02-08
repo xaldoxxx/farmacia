@@ -1,10 +1,15 @@
 import os
 
 class Config:
-    SECRET_KEY = "demo_farmacia_2026_premium_super_secreto_2025"
-    ADMIN_USER = "admin"
-    ADMIN_PASS = "farmacia2026"
-    NUMERO_WHATSAPP = "5491122334455"
+    # Usa variables de entorno si existen, si no, usa el default (pero oculto)
+    SECRET_KEY = os.environ.get("SECRET_KEY", "una-clave-muy-larga-y-compleja-2026")
+    ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
+    ADMIN_PASS = os.environ.get("ADMIN_PASS", "farmacia2026")
+    NUMERO_WHATSAPP = os.environ.get("WHATSAPP", "5491122334455")
+    
+    # El token de Ngrok debería estar fuera del código
+    NGROK_TOKEN = os.environ.get("NGROK_TOKEN", "TU_TOKEN_AQUÍ")
+
     
     # Compatible con Colab y script normal
     try:
