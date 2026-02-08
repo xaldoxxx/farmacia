@@ -15,6 +15,27 @@ def init_db():
             nombre TEXT NOT NULL UNIQUE
         )
     ''')
+
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS pedidos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fecha DATETIME NOT NULL,
+            total REAL NOT NULL,
+            estado TEXT NOT NULL DEFAULT 'pendiente'
+        )
+    """)
+
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS pedido_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pedido_id INTEGER NOT NULL,
+            producto_id TEXT NOT NULL,
+            cantidad INTEGER NOT NULL,
+            precio REAL NOT NULL,
+            FOREIGN KEY (pedido_id) REFERENCES pedidos(id)
+        )
+    """)
+
     db.execute('''
         CREATE TABLE IF NOT EXISTS productos (
             id TEXT PRIMARY KEY,
@@ -23,7 +44,7 @@ def init_db():
             detalle TEXT,
             precio REAL NOT NULL,
             cantidad INTEGER NOT NULL DEFAULT 0,
-            publicar_hasta TEXT NOT NULL,
+            publicar_hasta DATE NOT NULL,
             categoria_id INTEGER NOT NULL,
             FOREIGN KEY (categoria_id) REFERENCES categorias(id)
         )

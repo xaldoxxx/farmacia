@@ -147,6 +147,88 @@ def limpiar_carrito():
     flash("Carrito vaciado", 'info')
     return redirect(url_for('home'))
 
+
+
+# Este endpoint: Valida stock real Descuenta stock Crea pedido Crea items Todo en una transacción
+@app.route('/pedido/confirmar', methods=['POST'])
+def confirmar_pedido():
+    if 'cart' not in session or not session['cart']:
+        flash("El carrito está vacío", "warning")
+        return redirect(url_for('home'))
+
+    db = get_db()
+
+    try:
+        db.execute("BEGIN")  # 🔒 INICIO TRANSACCIÓN
+
+        items_carrito = []
+        total = 0
+
+        # 1️⃣ Validar stock REAL y calcular total
+        for producto_id, cantidad in session['cart'].items():
+            producto = db.execute(
+                "SELECT nombre, precio, cantidad FROM productos WHERE id = ?",
+                (producto_id,)
+            ).fetchone()
+
+            if not producto:
+                raise Exception("Producto inexistente")
+
+            if producto['cantidad'] < cantidad:
+                raise Exception(f"Stock insuficiente para {producto['nombre']}")
+
+            subtotal = cantidad * producto['precio']
+            total += subtotal
+
+            items_carrito.append({
+                "id": producto_id,
+                "nombre": producto['nombre'],
+                "cantidad": cantidad,
+                "precio": producto['precio']
+            })
+
+        # 2️⃣ Crear pedido (FUENTE DE VERDAD)
+        cur = db.execute(
+            "INSERT INTO pedidos (fecha, total) VALUES (?, ?)",
+            (datetime.now(), total)
+        )
+        pedido_id = cur.lastrowid
+
+        # 3️⃣ Crear items + descontar stock
+        for item in items_carrito:
+            db.execute("""
+                INSERT INTO pedido_items
+                (pedido_id, producto_id, cantidad, precio)
+                VALUES (?, ?, ?, ?)
+            """, (pedido_id, item['id'], item['cantidad'], item['precio']))
+
+            db.execute("""
+                UPDATE productos
+                SET cantidad = cantidad - ?
+                WHERE id = ?
+            """, (item['cantidad'], item['id']))
+
+        db.commit()  # ✅ TODO OK
+        session.pop('cart')  # limpiar carrito
+
+    except Exception as e:
+        db.rollback()  # ❌ TODO SE DESHACE
+        flash(str(e), "danger")
+        return redirect(url_for('home'))
+
+    # 4️⃣ WhatsApp SOLO REFERENCIA EL PEDIDO
+    mensaje = f"🌟 *PEDIDO FARMACIA 2026* 🌟%0A"
+    mensaje += f"🧾 Pedido #{pedido_id}%0A%0A"
+
+    for item in items_carrito:
+        mensaje += f"✅ {item['cantidad']}x {item['nombre']}%0A"
+
+    mensaje += f"%0A💰 TOTAL: ${total:.2f}"
+
+    return redirect(f"https://wa.me/{Config.NUMERO_WHATSAPP}?text={mensaje}")
+
+
+
 # --- Rutas Admin ---
 
 @app.route('/login', methods=['GET', 'POST'])
