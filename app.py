@@ -12,10 +12,10 @@ from flask import get_flashed_messages
 from functools import wraps
 from flask_wtf import CSRFProtect
 
-csrf = CSRFProtect(app)
+
 app = Flask(__name__)
 app.config.from_object(Config)
-
+csrf = CSRFProtect(app)
 
 
 # Asegurar carpetas
