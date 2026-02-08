@@ -10,8 +10,7 @@ from database import get_db, init_db
 from werkzeug.utils import secure_filename
 from flask import get_flashed_messages
 from functools import wraps
-from flask_wtf import CSRFProtect
-
+from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
 app.config.from_object(Config)

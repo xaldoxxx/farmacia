@@ -178,11 +178,13 @@
             </div>
 
             <form action="{{ url_for('confirmar_pedido') }}" method="post">
+                {{ csrf_token() }}
                 <button type="submit"
                         class="btn btn-success w-100 rounded-pill fw-bold">
                     CONFIRMAR PEDIDO
                 </button>
             </form>
+
 
         </div>
     </div>
